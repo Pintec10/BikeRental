@@ -3,7 +3,7 @@ package test.bikerental;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 public class Rental {
@@ -14,11 +14,11 @@ public class Rental {
     @GenericGenerator(name = "native", strategy = "native")
     private Long id;
 
-    private Date startDate;
-    private Date endDate;
+    private LocalDate startDate;
+    private LocalDate actualEndDate;
     private int agreedDurationDays;
     private Double finalCost;
-    private Double sumPaid;
+    private Double upfrontPayment;
 
     @ManyToOne
     @JoinColumn(name="bike_id")
@@ -31,15 +31,15 @@ public class Rental {
 
     //constructors
     public Rental(){};
-    public Rental(Date startDate, int agreedDurationDays, Double sumPaid) {
+    public Rental(LocalDate startDate, int agreedDurationDays, Double upfrontPayment) {
         this.startDate = startDate;
         this.agreedDurationDays = agreedDurationDays;
-        this.sumPaid = sumPaid;
+        this.upfrontPayment = upfrontPayment;
     }
-    public Rental(Date startDate, int agreedDurationDays, Double sumPaid, Bike bike, Customer customer) {
+    public Rental(LocalDate startDate, int agreedDurationDays, Double upfrontPayment, Bike bike, Customer customer) {
         this.startDate = startDate;
         this.agreedDurationDays = agreedDurationDays;
-        this.sumPaid = sumPaid;
+        this.upfrontPayment = upfrontPayment;
         this.bike = bike;
         this.customer = customer;
     }
@@ -47,19 +47,22 @@ public class Rental {
 
     //methods
     public Long getId(){ return id;}
-    public Date getStartDate() { return startDate; }
-    public Date getEndDate() { return endDate; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getActualEndDate() { return actualEndDate; }
     public int getAgreedDurationDays() { return agreedDurationDays; }
+    public LocalDate getExpectedEndDate() {
+        return startDate.plusDays(agreedDurationDays);
+    }
     public Double getFinalCost() { return finalCost; }
-    public Double getSumPaid() { return sumPaid; }
+    public Double getUpfrontPayment() { return upfrontPayment; }
     public Bike getBike() { return bike; }
     public Customer getCustomer() { return customer; }
 
-    public void setStartDate(Date startDate) { this.startDate = startDate; }
-    public void setEndDate(Date endDate) { this.endDate = endDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public void setActualEndDate(LocalDate actualEndDate) { this.actualEndDate = actualEndDate; }
     public void setAgreedDurationDays(int agreedDurationDays) { this.agreedDurationDays = agreedDurationDays; }
     public void setFinalCost(Double finalCost) { this.finalCost = finalCost; }
-    public void setSumPaid(Double sumPaid) { this.sumPaid = sumPaid; }
+    public void setUpfrontPayment(Double upfrontPayment) { this.upfrontPayment = upfrontPayment; }
     public void setBike(Bike bike) { this.bike = bike; }
     public void setCustomer(Customer customer) { this.customer = customer; }
 
@@ -67,7 +70,7 @@ public class Rental {
     public String toString(){
         return "Rental id: " + id + System.lineSeparator() +
                 "Bike id: " + bike + System.lineSeparator() +
-                //"Customer id: " + customer + System.lineSeparator() +
+                "Customer id: " + customer + System.lineSeparator() +
                 "Rental date: " + startDate;
     }
 }
