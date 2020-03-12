@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -88,15 +89,8 @@ public class AppController {
         newRental.setAgreedDurationDays(rentalForm.getAgreedDurationDays());
         rentalRepository.save(newRental);
 
-        Map<String, String> output = new HashMap<>();
-        output.put("customer_name", newRental.getCustomer().getName());
-        output.put("customer_email", newRental.getCustomer().getEmail());
-        output.put("customer_phoneNumber", newRental.getCustomer().getPhoneNumber());
-        output.put("bike_type", newRental.getBike().getBikeType());
-        output.put("bike_id", newRental.getBike().getId().toString());
-        output.put("rental_start", newRental.getStartDate().toString());
-        output.put("agreed_duration_days", newRental.getAgreedDurationDays().toString());
-        output.put("upfront_payment", newRental.getUpfrontPayment().toString());
+        Map<String, String> output = new LinkedHashMap<>();
+        output.putAll(rentalMapper(newRental));
 
         return new ResponseEntity(output, HttpStatus.CREATED);
     }
@@ -174,10 +168,8 @@ public class AppController {
         Map<String, String> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(rentalInRepository));
         output.put("actual_rental_duration_days", actualRentalDurationDays.toString());
-        output.put("final_cost", rentalInRepository.getFinalCost().toString());
         output.put("bike_cost_per_day", bikePricePerDay.toString());
         output.put("extra_cost_per_day", extraPricePerDay.toString());
-        //output.put("upfront_payment", rentalInRepository.getUpfrontPayment().toString());
 
         return new ResponseEntity(output, HttpStatus.OK);
 
@@ -187,22 +179,40 @@ public class AppController {
         Map<String, String> output = new LinkedHashMap<>();
         output.put("rental_id", rental.getId().toString());
         output.put("customer_name", rental.getCustomer().getName());
+        output.put("customer_email", rental.getCustomer().getEmail());
+        output.put("customer_phoneNumber", rental.getCustomer().getPhoneNumber());
         output.put("bike_type", rental.getBike().getBikeType());
         output.put("bike_id", rental.getBike().getId().toString());
         output.put("start_date", rental.getStartDate().toString());
         output.put("agreed_duration_days", rental.getAgreedDurationDays().toString());
-        //output.put("actual_rental_duration", actualRentalDurationDays.toString());
-        //output.put("bike_cost_per_day", bikePricePerDay.toString());
-        //output.put("extra_cost_per_day", extraPricePerDay.toString());
         output.put("upfront_payment", rental.getUpfrontPayment().toString());
+        if (rental.getFinalCost() != null) {
+            output.put("final_cost", rental.getFinalCost().toString());
+        }
 
         return output;
     }
 
-    /* ----- INITIAL ENDPOINT -----
-       @RequestMapping(value="/return", method = RequestMethod.POST)
+    /* ----- ALTERNATIVE ENDPOINT FOR BIKE RETURN -----
+       // more suitable if there is no endpoint for
+    @RequestMapping(value="/return", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> returnBike(@RequestBody RentalForm returnForm) {
+
     Rental rentalInRepository = rentalRepository.findByStartDateAndBike_id(returnForm.getStartDate(), returnForm.getBikeId());
+
+     // (... proceeds similarly to the existing method)
     }
      */
+
+
+
+    // ----- ALL RENTALS VIEW ENDPOINT -----
+    @RequestMapping(value="/rentals", method = RequestMethod.GET)
+    public ResponseEntity<Set<Map<String, String>>> viewAllRentals() {
+        Set<Map<String, String>> output = rentalRepository.findAll().stream()
+                .map(oneRental -> rentalMapper(oneRental))
+                .collect(Collectors.toSet());
+
+        return new ResponseEntity(output, HttpStatus.OK);
+    }
 }

@@ -17,7 +17,7 @@ public class Rental {
     private LocalDate startDate;
     private LocalDate actualEndDate;
     private Integer agreedDurationDays;
-    private Double finalCost;
+    private Double finalCost = null;
     private Double upfrontPayment;
 
     @ManyToOne
