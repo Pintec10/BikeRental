@@ -10,16 +10,18 @@ public class RentalForm {
     private String bikeType;
     private LocalDate startDate;
     private Integer agreedDurationDays;
+    private Long bikeId;
 
     //constructors
     public RentalForm(){};
-    public RentalForm (String name, String email, String phoneNumber, String bikeType, LocalDate startDate, Integer agreedDurationDays){
+    public RentalForm (String name, String email, String phoneNumber, String bikeType, LocalDate startDate, Integer agreedDurationDays, Long bikeId){
         this.name= name;
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.bikeType = bikeType;
         this.startDate = startDate;
         this.agreedDurationDays = agreedDurationDays;
+        this.bikeId = bikeId;
     }
 
     //methods
@@ -47,4 +49,6 @@ public class RentalForm {
     public Integer getAgreedDurationDays() {
         return agreedDurationDays;
     }
+
+    public Long getBikeId() { return bikeId; }
 }

@@ -32,6 +32,7 @@ public class BikeRentalApplication {
 				PriceList priceList = new PriceList();
 				priceList.addOrUpdatePriceListItem("normal", 10.0);
 				priceList.addOrUpdatePriceListItem("mountain", 12.0);
+				priceList.addOrUpdatePriceListItem("extraFee", 3.0);
 				priceListRepository.save(priceList);
 			}
 
@@ -57,16 +58,20 @@ public class BikeRentalApplication {
 			customerRepository.save(cs02);
 
 
-			LocalDate d01 = LocalDate.now();
+			LocalDate d01 = LocalDate.now().minusDays(3);
 			LocalDate d02 = d01.plusDays(1);
-			LocalDate d03 = d01.plusDays(1);
+			LocalDate d03 = d02.plusDays(1);
 
-			Rental rn01 = new Rental(d01, 1, 10.0, bk01, cs01);
+			Rental rn01 = new Rental(d01, 4, 40.0, bk01, cs01);
 			Rental rn02 = new Rental(d02, 1, 12.0, bk04, cs02);
-			Rental rn03 = new Rental(d03, 3, 36.0, bk04, cs01);
+			Rental rn03 = new Rental(d03, 5, 60.0, bk04, cs01);
+			Rental rn04 = new Rental(d01, 2, 20.0, bk02, cs01);
+			Rental rn05 = new Rental(d02, 4, 40.0, bk05, cs02);
 			rentalRepository.save(rn01);
 			rentalRepository.save(rn02);
 			rentalRepository.save(rn03);
+			rentalRepository.save(rn04);
+			rentalRepository.save(rn05);
 			// ----- TESTBED ENDS HERE
 			}
 		};

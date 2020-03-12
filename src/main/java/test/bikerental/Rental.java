@@ -56,6 +56,7 @@ public class Rental {
     public Double getFinalCost() { return finalCost; }
     public Double getUpfrontPayment() { return upfrontPayment; }
     public Bike getBike() { return bike; }
+    //public Long getBikeId() { return bike.getId(); }
     public Customer getCustomer() { return customer; }
 
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }

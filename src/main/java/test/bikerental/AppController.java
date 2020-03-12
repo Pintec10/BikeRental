@@ -1,14 +1,13 @@
 package test.bikerental;
 
+import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.*;
 
 @RestController
@@ -27,6 +26,8 @@ public class AppController {
     @Autowired
     PriceListRepository priceListRepository;
 
+
+    // ----- RENTAL ENDPOINT -----
     @RequestMapping(value="/rent", method = RequestMethod.POST)
     public ResponseEntity<Map<String, String>> createNewRental(@RequestBody RentalForm rentalForm) {
 
@@ -115,4 +116,93 @@ public class AppController {
         output.put(key, value);
         return output;
     }
+
+
+    // ----- RETURN ENDPOINT -----
+    @RequestMapping(value="/return/{rentalId}", method = RequestMethod.POST)
+    public ResponseEntity<Map<String, String>> returnBike(@PathVariable Long rentalId) {
+
+        //setup
+        PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
+        Rental rentalInRepository = rentalRepository.findById(rentalId).orElse(null);
+
+        System.out.println("rental in repository id:");
+        System.out.println(rentalInRepository.getId());
+
+        //if no Rental is found, send an error message
+        if (rentalInRepository == null) {
+            return new ResponseEntity(makeMap("error", "Reservation not found, check bike id and rental starting date (YYYY-MM-DD)"),
+                    HttpStatus.NOT_FOUND);
+        }
+
+        //calculate actual rental duration
+        LocalDate returnDay = LocalDate.now();
+            // if bike return has been handled already, the original return day will be used (results won't change)
+        if(rentalInRepository.getActualEndDate() != null) {
+            returnDay = rentalInRepository.getActualEndDate();
+        }
+        LocalDate rentalStartDate = rentalInRepository.getStartDate();
+        Integer actualRentalDurationDays = Period.between(rentalStartDate, returnDay.plusDays(1)).getDays();
+        if(actualRentalDurationDays < 0) {
+            return new ResponseEntity(makeMap("error", "rental end date cannot be before start date"), HttpStatus.FORBIDDEN);
+        }
+        Integer extraDays = actualRentalDurationDays - rentalInRepository.getAgreedDurationDays();
+        if(extraDays < 0) {
+            extraDays = 0;
+        }
+
+        //calculate final price
+        Double bikePricePerDay = priceListInstance.getBikePriceList().get(rentalInRepository.getBike().getBikeType());
+        Double extraPricePerDay = priceListInstance.getBikePriceList().get("extraFee");
+        if(bikePricePerDay == null || extraPricePerDay == null) {
+            return new ResponseEntity(makeMap("error", "the daily price for this bike or the late return fee " +
+                    "are not defined in the price list"), HttpStatus.NOT_FOUND);
+        }
+        //if bike is returned earlier than agreed, there is no discount (they can bargain with the owner!)
+        Double finalCost = (actualRentalDurationDays * bikePricePerDay) + (extraDays * extraPricePerDay);
+        if(finalCost < rentalInRepository.getUpfrontPayment()) {
+            finalCost = rentalInRepository.getUpfrontPayment();
+        }
+
+        // update RentalRepository and send information to front-end, if the return was not already handled before
+        if(rentalInRepository.getFinalCost() == null) {
+            rentalInRepository.setActualEndDate(returnDay);
+            rentalInRepository.setFinalCost(finalCost);
+            rentalRepository.save(rentalInRepository);
+        } else { System.out.println("case already handled");}
+
+        Map<String, String> output = new LinkedHashMap<>();
+        output.putAll(rentalMapper(rentalInRepository));
+        output.put("actual_rental_duration_days", actualRentalDurationDays.toString());
+        output.put("final_cost", rentalInRepository.getFinalCost().toString());
+        output.put("bike_cost_per_day", bikePricePerDay.toString());
+        output.put("extra_cost_per_day", extraPricePerDay.toString());
+        //output.put("upfront_payment", rentalInRepository.getUpfrontPayment().toString());
+
+        return new ResponseEntity(output, HttpStatus.OK);
+
+    }
+
+    private Map<String,String> rentalMapper (Rental rental) {
+        Map<String, String> output = new LinkedHashMap<>();
+        output.put("rental_id", rental.getId().toString());
+        output.put("customer_name", rental.getCustomer().getName());
+        output.put("bike_type", rental.getBike().getBikeType());
+        output.put("bike_id", rental.getBike().getId().toString());
+        output.put("start_date", rental.getStartDate().toString());
+        output.put("agreed_duration_days", rental.getAgreedDurationDays().toString());
+        //output.put("actual_rental_duration", actualRentalDurationDays.toString());
+        //output.put("bike_cost_per_day", bikePricePerDay.toString());
+        //output.put("extra_cost_per_day", extraPricePerDay.toString());
+        output.put("upfront_payment", rental.getUpfrontPayment().toString());
+
+        return output;
+    }
+
+    /* ----- INITIAL ENDPOINT -----
+       @RequestMapping(value="/return", method = RequestMethod.POST)
+    public ResponseEntity<Map<String, Object>> returnBike(@RequestBody RentalForm returnForm) {
+    Rental rentalInRepository = rentalRepository.findByStartDateAndBike_id(returnForm.getStartDate(), returnForm.getBikeId());
+    }
+     */
 }
