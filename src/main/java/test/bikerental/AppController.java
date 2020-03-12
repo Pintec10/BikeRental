@@ -31,16 +31,9 @@ public class AppController {
     public ResponseEntity<Map<String, String>> createNewRental(@RequestBody RentalForm rentalForm) {
 
         //setup
-        System.out.println("rent request received");
         String reqBikeType = rentalForm.getBikeType();
-            //Set<Bike> bikeList = bikeRepository.findByBikeType(reqBikeType);
         PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
         Rental newRental = new Rental();
-
-        //looks for one random available bike of the required type
-        Bike availableBike = bikeRepository.findByBikeType(reqBikeType).stream()
-                .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
-                        rentalForm.getAgreedDurationDays())).findAny().orElse(null);
 
         //if rentalForm info is not complete, return error message
         if (rentalForm.getStartDate() == null || rentalForm.getAgreedDurationDays() == null
@@ -48,6 +41,21 @@ public class AppController {
                 || rentalForm.getEmail() == null || rentalForm.getPhoneNumber() == null) {
             return new ResponseEntity(makeMap("error", "Please send all required information"), HttpStatus.BAD_REQUEST);
         }
+
+        // minimum check for email format
+        if (!rentalForm.getEmail().contains("@") || rentalForm.getEmail().contains(" ")) {
+            return new ResponseEntity(makeMap("error", "Invalid email format"), HttpStatus.FORBIDDEN);
+        }
+
+        // minimum check for rental duration
+        if (rentalForm.getAgreedDurationDays() < 1) {
+            return new ResponseEntity(makeMap("error", "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
+        }
+
+        //looks for one random available bike of the required type
+        Bike availableBike = bikeRepository.findByBikeType(reqBikeType).stream()
+                .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
+                        rentalForm.getAgreedDurationDays())).findAny().orElse(null);
 
         //if bike is not available, return error message
         if (availableBike == null) {
@@ -68,7 +76,7 @@ public class AppController {
         if(customerInRepository == null) {
             System.out.println("new customer!");
             System.out.println(rentalForm.getEmail());
-            customerRepository.save(new Customer(rentalForm.getName(), rentalForm.getEmail(), rentalForm.getPhoneNumber()));
+            customerRepository.save(new Customer(rentalForm.getName().trim(), rentalForm.getEmail(), rentalForm.getPhoneNumber()));
             customerInRepository = customerRepository.findByEmail(rentalForm.getEmail()).orElse(null);
         }
 
@@ -81,7 +89,10 @@ public class AppController {
 
         Map<String, String> output = new HashMap<>();
         output.put("customer_name", newRental.getCustomer().getName());
+        output.put("customer_email", newRental.getCustomer().getEmail());
+        output.put("customer_phoneNumber", newRental.getCustomer().getPhoneNumber());
         output.put("bike_type", newRental.getBike().getBikeType());
+        output.put("bike_id", newRental.getBike().getId().toString());
         output.put("rental_start", newRental.getStartDate().toString());
         output.put("agreed_duration_days", newRental.getAgreedDurationDays().toString());
         output.put("upfront_payment", newRental.getUpfrontPayment().toString());
@@ -90,7 +101,6 @@ public class AppController {
     }
 
     private Boolean isAvailable(Bike oneBike, LocalDate reqStartRentalDate, int reqRentalDurationDays) {
-        System.out.println("checking availability");
         LocalDate reqEndRentalDate = reqStartRentalDate.plusDays(reqRentalDurationDays - 1);
         Set<Rental> singleBikeRentals = oneBike.getRentalsPerBike();
 

@@ -51,7 +51,7 @@ public class Rental {
     public LocalDate getActualEndDate() { return actualEndDate; }
     public Integer getAgreedDurationDays() { return agreedDurationDays; }
     public LocalDate getExpectedEndDate() {
-        return startDate.plusDays(agreedDurationDays);
+        return startDate.plusDays(agreedDurationDays -1);
     }
     public Double getFinalCost() { return finalCost; }
     public Double getUpfrontPayment() { return upfrontPayment; }
