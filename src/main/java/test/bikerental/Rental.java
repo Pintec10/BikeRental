@@ -16,7 +16,7 @@ public class Rental {
 
     private LocalDate startDate;
     private LocalDate actualEndDate;
-    private int agreedDurationDays;
+    private Integer agreedDurationDays;
     private Double finalCost;
     private Double upfrontPayment;
 
@@ -49,7 +49,7 @@ public class Rental {
     public Long getId(){ return id;}
     public LocalDate getStartDate() { return startDate; }
     public LocalDate getActualEndDate() { return actualEndDate; }
-    public int getAgreedDurationDays() { return agreedDurationDays; }
+    public Integer getAgreedDurationDays() { return agreedDurationDays; }
     public LocalDate getExpectedEndDate() {
         return startDate.plusDays(agreedDurationDays);
     }
@@ -60,7 +60,7 @@ public class Rental {
 
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public void setActualEndDate(LocalDate actualEndDate) { this.actualEndDate = actualEndDate; }
-    public void setAgreedDurationDays(int agreedDurationDays) { this.agreedDurationDays = agreedDurationDays; }
+    public void setAgreedDurationDays(Integer agreedDurationDays) { this.agreedDurationDays = agreedDurationDays; }
     public void setFinalCost(Double finalCost) { this.finalCost = finalCost; }
     public void setUpfrontPayment(Double upfrontPayment) { this.upfrontPayment = upfrontPayment; }
     public void setBike(Bike bike) { this.bike = bike; }

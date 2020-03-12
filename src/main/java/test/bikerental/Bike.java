@@ -3,14 +3,17 @@ package test.bikerental;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 public class Bike {
-    public enum BikeType {
+
+    // will create a unique list of bike types - REMOVED. To allow possible type extension
+    /*public enum BikeType {
         NORMAL, MOUNTAIN
-    }
+    }*/
 
     //fields
     @Id
@@ -18,15 +21,14 @@ public class Bike {
     @GenericGenerator(name = "native", strategy = "native")
     private Long id;
 
-    private BikeType bikeType;
+    private String bikeType;
 
     @OneToMany(mappedBy = "bike")
     private Set<Rental> rentalsPerBike = new HashSet<>();
 
     //constructors
     public Bike(){};
-
-    public Bike(BikeType bikeType) {
+    public Bike(String bikeType) {
         this.bikeType = bikeType;
     }
 
@@ -35,12 +37,12 @@ public class Bike {
     public Long getId() {
         return id;
     }
-    public BikeType getBikeType() {
+    public String getBikeType() {
         return bikeType;
     }
     public Set<Rental> getRentalsPerBike() { return rentalsPerBike; }
 
-    public void setBikeType (BikeType bikeType) {
+    public void setBikeType(String bikeType) {
         this.bikeType = bikeType;
     }
 
