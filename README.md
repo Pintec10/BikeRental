@@ -40,11 +40,16 @@ The app was designed with extensibility criteria in mind: if in the future addit
 ### Renting a bike (`/api/rent`), method: POST
 -	The front end should send the following data as stringified JSON in the body of the request, using the same key names:
 	{
-	 name: *(name and surname of customer)*
+	name: *(name and surname of customer)*
+	 
 	 email: *(email of customer)*
+	 
 	 phoneNumber: *(phone number of customer)*
+	 
 	 bikeType: *(either 'normal' or 'mountain')*
+	 
 	 startDate: *(date in YYYY-MM-DD format)*
+	 
 	 agreedDurationDays: *(number of days agreed in advance for the rental)*
 	}
 -	Checks if a bike of the requested type is available in the desired days 
