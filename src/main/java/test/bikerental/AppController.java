@@ -53,6 +53,11 @@ public class AppController {
             return new ResponseEntity(makeMap("error", "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
         }
 
+        //if startDate is in the past, send error message
+        if(rentalForm.getStartDate().isBefore(LocalDate.now())) {
+            return new ResponseEntity(makeMap("error", "Rental start date is in the past"), HttpStatus.FORBIDDEN);
+        }
+
         //looks for one random available bike of the required type
         Bike availableBike = bikeRepository.findByBikeType(requiredBikeType).stream()
                 .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
@@ -77,8 +82,6 @@ public class AppController {
         //if customer is not already in database, then save it
         Customer customerInRepository = customerRepository.findByEmail(rentalForm.getEmail()).orElse(null);
         if(customerInRepository == null) {
-            System.out.println("new customer!");
-            System.out.println(rentalForm.getEmail());
             customerRepository.save(new Customer(rentalForm.getName().trim(), rentalForm.getEmail(), rentalForm.getPhoneNumber().trim()));
             customerInRepository = customerRepository.findByEmail(rentalForm.getEmail()).orElse(null);
         }
