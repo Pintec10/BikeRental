@@ -15,10 +15,13 @@ public class Rental {
     private Long id;
 
     private LocalDate startDate;
-    private LocalDate actualEndDate;
     private Integer agreedDurationDays;
-    private Double finalCost = null;
+    private Double bikeDailyPrice;
+    private Double extraDailyPrice;
     private Double upfrontPayment;
+    private LocalDate actualEndDate;
+    private Double finalCost;
+
 
     @ManyToOne
     @JoinColumn(name="bike_id")
@@ -31,41 +34,45 @@ public class Rental {
 
     //constructors
     public Rental(){};
-    public Rental(LocalDate startDate, int agreedDurationDays, Double upfrontPayment) {
+    public Rental(LocalDate startDate, int agreedDurationDays, Double bikeDailyPrice, Double extraDailyPrice, Double upfrontPayment, Bike bike, Customer customer, LocalDate actualEndDate, Double finalCost) {
         this.startDate = startDate;
         this.agreedDurationDays = agreedDurationDays;
-        this.upfrontPayment = upfrontPayment;
-    }
-    public Rental(LocalDate startDate, int agreedDurationDays, Double upfrontPayment, Bike bike, Customer customer) {
-        this.startDate = startDate;
-        this.agreedDurationDays = agreedDurationDays;
+        this.bikeDailyPrice = bikeDailyPrice;
+        this.extraDailyPrice = extraDailyPrice;
         this.upfrontPayment = upfrontPayment;
         this.bike = bike;
         this.customer = customer;
+        this.actualEndDate = actualEndDate;
+        this.finalCost = finalCost;
     }
 
 
     //methods
     public Long getId(){ return id;}
     public LocalDate getStartDate() { return startDate; }
-    public LocalDate getActualEndDate() { return actualEndDate; }
     public Integer getAgreedDurationDays() { return agreedDurationDays; }
+    public Double getBikeDailyPrice() { return bikeDailyPrice; }
+    public Double getExtraDailyPrice() { return extraDailyPrice; }
+    public Double getUpfrontPayment() { return upfrontPayment; }
+    public LocalDate getActualEndDate() { return actualEndDate; }
+    public Double getFinalCost() { return finalCost; }
+    public Bike getBike() { return bike; }
+    public Customer getCustomer() { return customer; }
+
     public LocalDate getExpectedEndDate() {
         return startDate.plusDays(agreedDurationDays -1);
     }
-    public Double getFinalCost() { return finalCost; }
-    public Double getUpfrontPayment() { return upfrontPayment; }
-    public Bike getBike() { return bike; }
-    //public Long getBikeId() { return bike.getId(); }
-    public Customer getCustomer() { return customer; }
 
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
-    public void setActualEndDate(LocalDate actualEndDate) { this.actualEndDate = actualEndDate; }
     public void setAgreedDurationDays(Integer agreedDurationDays) { this.agreedDurationDays = agreedDurationDays; }
-    public void setFinalCost(Double finalCost) { this.finalCost = finalCost; }
+    public void setBikeDailyPrice(Double bikeDailyPrice) { this.bikeDailyPrice = bikeDailyPrice; }
+    public void setExtraDailyPrice(Double extraDailyPrice) { this.extraDailyPrice = extraDailyPrice; }
     public void setUpfrontPayment(Double upfrontPayment) { this.upfrontPayment = upfrontPayment; }
+    public void setActualEndDate(LocalDate actualEndDate) { this.actualEndDate = actualEndDate; }
+    public void setFinalCost(Double finalCost) { this.finalCost = finalCost; }
     public void setBike(Bike bike) { this.bike = bike; }
     public void setCustomer(Customer customer) { this.customer = customer; }
+
 
     @Override
     public String toString(){

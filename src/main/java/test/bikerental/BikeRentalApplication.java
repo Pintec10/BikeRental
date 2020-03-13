@@ -62,11 +62,11 @@ public class BikeRentalApplication {
 			LocalDate d02 = d01.plusDays(1);
 			LocalDate d03 = d02.plusDays(1);
 
-			Rental rn01 = new Rental(d01, 4, 40.0, bk01, cs01);
-			Rental rn02 = new Rental(d02, 1, 12.0, bk04, cs02);
-			Rental rn03 = new Rental(d03, 5, 60.0, bk04, cs01);
-			Rental rn04 = new Rental(d01, 2, 20.0, bk02, cs01);
-			Rental rn05 = new Rental(d02, 4, 40.0, bk05, cs02);
+			Rental rn01 = new Rental(d01, 4, 10.0, 3.0, 40.0, bk01, cs01, null, null);
+			Rental rn02 = new Rental(d02, 1, 12.0, 3.0, 12.0, bk04, cs02, null, null);
+			Rental rn03 = new Rental(d03, 5, 12.0, 3.0, 60.0, bk04, cs01, null, null);
+			Rental rn04 = new Rental(d01, 2, 10.0, 3.0, 20.0, bk02, cs01, null, null);
+			Rental rn05 = new Rental(d02, 4, 12.0, 3.0, 40.0, bk05, cs02, null, null);
 			rentalRepository.save(rn01);
 			rentalRepository.save(rn02);
 			rentalRepository.save(rn03);

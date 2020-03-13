@@ -2,6 +2,7 @@ package test.bikerental;
 
 import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,10 +31,10 @@ public class AppController {
 
     // ----- RENTAL ENDPOINT -----
     @RequestMapping(value="/rent", method = RequestMethod.POST)
-    public ResponseEntity<Map<String, String>> createNewRental(@RequestBody RentalForm rentalForm) {
+    public ResponseEntity<Map<String, Object>> createNewRental(@RequestBody RentalForm rentalForm) {
 
         //setup
-        String reqBikeType = rentalForm.getBikeType();
+        String requiredBikeType = rentalForm.getBikeType();
         PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
         Rental newRental = new Rental();
 
@@ -55,18 +56,19 @@ public class AppController {
         }
 
         //looks for one random available bike of the required type
-        Bike availableBike = bikeRepository.findByBikeType(reqBikeType).stream()
+        Bike availableBike = bikeRepository.findByBikeType(requiredBikeType).stream()
                 .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
                         rentalForm.getAgreedDurationDays())).findAny().orElse(null);
-
+        System.out.println(("availableBike"));
+        System.out.println(availableBike);
         //if bike is not available, return error message
         if (availableBike == null) {
-            return new ResponseEntity(makeMap("error", "No bikes available! Change bike type or time slot"), HttpStatus.FORBIDDEN);
+            return new ResponseEntity(makeMap("error", "No bikes available! Change/check bike type or time slot"), HttpStatus.FORBIDDEN);
         }
 
-        //calculate upfront payment; if bike model is not in the price list, return error
-        if (priceListInstance.getBikePriceList().containsKey(reqBikeType) ) {
-            Double upfrontPayment = priceListInstance.getBikePriceList().get(reqBikeType)
+        //calculate and set upfront payment; if bike model is not in the price list, return error
+        if (priceListInstance.getBikePriceList().containsKey(requiredBikeType) ) {
+            Double upfrontPayment = priceListInstance.getBikePriceList().get(requiredBikeType)
                     * rentalForm.getAgreedDurationDays() ;
             newRental.setUpfrontPayment(upfrontPayment);
         } else {
@@ -87,9 +89,13 @@ public class AppController {
         newRental.setBike(availableBike);
         newRental.setStartDate(rentalForm.getStartDate());
         newRental.setAgreedDurationDays(rentalForm.getAgreedDurationDays());
+        newRental.setBikeDailyPrice(priceListInstance.getBikePriceList().get(availableBike.getBikeType()));
+        newRental.setExtraDailyPrice(priceListInstance.getBikePriceList().get("extraFee"));
+        newRental.setActualEndDate(null);
+        newRental.setFinalCost(null);
         rentalRepository.save(newRental);
 
-        Map<String, String> output = new LinkedHashMap<>();
+        Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(newRental));
 
         return new ResponseEntity(output, HttpStatus.CREATED);
@@ -114,14 +120,10 @@ public class AppController {
 
     // ----- RETURN ENDPOINT -----
     @RequestMapping(value="/return/{rentalId}", method = RequestMethod.POST)
-    public ResponseEntity<Map<String, String>> returnBike(@PathVariable Long rentalId) {
+    public ResponseEntity<Map<String, Object>> returnBike(@PathVariable Long rentalId) {
 
         //setup
-        PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
         Rental rentalInRepository = rentalRepository.findById(rentalId).orElse(null);
-
-        System.out.println("rental in repository id:");
-        System.out.println(rentalInRepository.getId());
 
         //if no Rental is found, send an error message
         if (rentalInRepository == null) {
@@ -129,12 +131,13 @@ public class AppController {
                     HttpStatus.NOT_FOUND);
         }
 
+        //if bike return has been already handled, send an error message
+        if(rentalInRepository.getActualEndDate() != null) {
+            return new ResponseEntity(makeMap("error", "Bike was already returned"), HttpStatus.FORBIDDEN);
+        }
+
         //calculate actual rental duration
         LocalDate returnDay = LocalDate.now();
-            // if bike return has been handled already, the original return day will be used (results won't change)
-        if(rentalInRepository.getActualEndDate() != null) {
-            returnDay = rentalInRepository.getActualEndDate();
-        }
         LocalDate rentalStartDate = rentalInRepository.getStartDate();
         Integer actualRentalDurationDays = Period.between(rentalStartDate, returnDay.plusDays(1)).getDays();
         if(actualRentalDurationDays < 0) {
@@ -146,12 +149,9 @@ public class AppController {
         }
 
         //calculate final price
-        Double bikePricePerDay = priceListInstance.getBikePriceList().get(rentalInRepository.getBike().getBikeType());
-        Double extraPricePerDay = priceListInstance.getBikePriceList().get("extraFee");
-        if(bikePricePerDay == null || extraPricePerDay == null) {
-            return new ResponseEntity(makeMap("error", "the daily price for this bike or the late return fee " +
-                    "are not defined in the price list"), HttpStatus.NOT_FOUND);
-        }
+        Double bikePricePerDay = rentalInRepository.getBikeDailyPrice();
+        Double extraPricePerDay = rentalInRepository.getExtraDailyPrice();
+
         //if bike is returned earlier than agreed, there is no discount (they can bargain with the owner!)
         Double finalCost = (actualRentalDurationDays * bikePricePerDay) + (extraDays * extraPricePerDay);
         if(finalCost < rentalInRepository.getUpfrontPayment()) {
@@ -165,31 +165,49 @@ public class AppController {
             rentalRepository.save(rentalInRepository);
         } else { System.out.println("case already handled");}
 
-        Map<String, String> output = new LinkedHashMap<>();
+        Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(rentalInRepository));
-        output.put("actual_rental_duration_days", actualRentalDurationDays.toString());
-        output.put("bike_cost_per_day", bikePricePerDay.toString());
-        output.put("extra_cost_per_day", extraPricePerDay.toString());
+        //output.put("actual_rental_duration_days", actualRentalDurationDays.toString());
 
         return new ResponseEntity(output, HttpStatus.OK);
 
     }
 
-    private Map<String,String> rentalMapper (Rental rental) {
-        Map<String, String> output = new LinkedHashMap<>();
-        output.put("rental_id", rental.getId().toString());
-        output.put("customer_name", rental.getCustomer().getName());
-        output.put("customer_email", rental.getCustomer().getEmail());
-        output.put("customer_phoneNumber", rental.getCustomer().getPhoneNumber());
-        output.put("bike_type", rental.getBike().getBikeType());
-        output.put("bike_id", rental.getBike().getId().toString());
-        output.put("start_date", rental.getStartDate().toString());
-        output.put("agreed_duration_days", rental.getAgreedDurationDays().toString());
-        output.put("upfront_payment", rental.getUpfrontPayment().toString());
-        if (rental.getFinalCost() != null) {
-            output.put("final_cost", rental.getFinalCost().toString());
-        }
+    private Map<String,Object> rentalMapper (Rental rental) {
+        Map<String, Object> output = new LinkedHashMap<>();
 
+        output.put("rental_id", rental.getId());
+        output.put("customer", customerMapper(rental.getCustomer()));
+        output.put("bike", bikeMapper(rental.getBike()));
+        output.put("bike_daily_price", rental.getBikeDailyPrice());
+        output.put("extra_daily_price", rental.getExtraDailyPrice());
+        output.put("agreed_duration_days", rental.getAgreedDurationDays());
+        output.put("upfront_payment", rental.getUpfrontPayment());
+        output.put("start_date", rental.getStartDate().toString());
+        output.put("expected_end_date", rental.getExpectedEndDate());
+        if(rental.getActualEndDate() !=  null) {
+            output.put("actual_end_date", rental.getActualEndDate().toString());
+        } else { output.put("actual_end_date", null); }
+        if (rental.getFinalCost() != null) {
+            output.put("final_cost", rental.getFinalCost());
+        } else { output.put("final_cost", null); }
+
+        return output;
+    }
+
+    private Map<String, Object> customerMapper(Customer customer) {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("id", customer.getId());
+        output.put("name", customer.getName());
+        output.put("email", customer.getEmail());
+        output.put("phone_number", customer.getPhoneNumber());
+        return output;
+    }
+
+    private Map<String, Object> bikeMapper(Bike bike) {
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put("id", bike.getId().toString());
+        output.put("type", bike.getBikeType());
         return output;
     }
 
@@ -208,11 +226,11 @@ public class AppController {
 
     // ----- ALL RENTALS VIEW ENDPOINT -----
     @RequestMapping(value="/rentals", method = RequestMethod.GET)
-    public ResponseEntity<Set<Map<String, String>>> viewAllRentals() {
-        Set<Map<String, String>> output = rentalRepository.findAll().stream()
+    public ResponseEntity<List<Map<String, Object>>> viewAllRentals() {
+        List<Map<String, Object>> allRentals = rentalRepository.findAll().stream()
+                .sorted(Comparator.comparingLong(Rental::getId))
                 .map(oneRental -> rentalMapper(oneRental))
-                .collect(Collectors.toSet());
-
-        return new ResponseEntity(output, HttpStatus.OK);
+                .collect(Collectors.toList());
+        return new ResponseEntity(allRentals, HttpStatus.OK);
     }
 }
