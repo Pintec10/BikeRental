@@ -10,8 +10,8 @@ The app was designed with extensibility criteria in mind: if in the future addit
 ## CLASSES
 ### Bike, Customer
 -	Other fields could be added such as e.g. identification document number etc.
--	The bikeType field is of String type; an enum would have been less error-prone, but more rigid towards addition of other bike types in the future. The front-end is advised to use select or radio button elements as input fields for this.
--	The phoneNumber field is a String, to allow the use of e.g. the '+' sign for international codes
+-	The **bikeType** field is of String type; an enum would have been less error-prone, but more rigid towards addition of other bike types in the future. The front-end is advised to use select or radio button elements as input fields for this.
+-	The **phoneNumber** field is a String, to allow the use of e.g. the '+' sign for international codes
 
 ### Rental
 -	Has a ManyToOne relation with Bike and with Customer.
@@ -36,34 +36,34 @@ The app was designed with extensibility criteria in mind: if in the future addit
 
 
 ## ENDPOINTS
-### Renting a bike (/api/rent), method: POST
+### Renting a bike (`/api/rent`), method: POST
 -	The front end should send the following data as stringified JSON in the body of the request, using the same key names:
 	{
-	 name: (name and surname of customer)
-	 email: (email of customer)
-	 phoneNumber: (phone number of customer)
-	 bikeType: (either 'normal' or 'mountain')
-	 startDate: (date in YYYY-MM-DD format)
-	 agreedDurationDays: (number of days agreed in advance for the rental)
+	 name: *(name and surname of customer)*
+	 email: *(email of customer)*
+	 phoneNumber: *(phone number of customer)*
+	 bikeType: *(either 'normal' or 'mountain')*
+	 startDate: *(date in YYYY-MM-DD format)*
+	 agreedDurationDays: *(number of days agreed in advance for the rental)*
 	}
 -	Checks if a bike of the requested type is available in the desired days 
 -	Uses the customer email as unique identifier to determine if the customer is already in the database; otherwise it will create a new Customer instance
--	In the end returns also an upfrontPayment field which contains the price to be paid upfront for the requested bike type and rental duration 
+-	In the end returns also an **upfrontPayment** field which contains the price to be paid upfront for the requested bike type and rental duration 
 
-### Returning a bike (/api/return/{rentalId}), method: POST
--	The front-end should provide the rentalId as a path variable. For practical reasons, the back-end should also expose a GET method returning a JSON with all the list of Rentals and related data (see below).
+### Returning a bike (`/api/return/{rentalId}`), method: POST
+-	The front-end should provide the **rentalId** as a path variable. For practical reasons, the back-end should also expose a GET method returning a JSON with all the list of Rentals and related data (see below).
 -	If having additional endpoints is not desired, an alternative approach is shown in a comment inside the AppController class. The idea is to provide a RentalForm object in the body of the request, using a JSON with keys named 'bikeId' and 'startDate' to unequivocally identify the corresponding Rental instance. 
 	The Id of the bike could be physically placed on the bike itself. This approach is obviously less recommended though.
--	In the end, it returns a finalCost field which contains the total price including possible extra fees due to late return of the bike.
--	It is assumed that if a bike is returned earlier than the expected date, no discount or refund will be applied, and the finalCost is the same as the upfrontPayment.
+-	In the end, it returns a **finalCost** field which contains the total price including possible extra fees due to late return of the bike.
+-	It is assumed that if a bike is returned earlier than the expected date, no discount or refund will be applied, and the **finalCost** is the same as the **upfrontPayment**.
 -	Error messages are issued if:
-  -	the return event for the requested Rental has already been handled (actualEndDate has been set)
+  -	the return event for the requested Rental has already been handled (**actualEndDate** has been set)
   -	the return date (which is the day when the POST request is made) is before the starting rental date; i.e., cancelling a reservation cannot be done through this endpoint. One for deleting a rental has been included here (see below).
 
-### Fetching a list of all rentals (/api/rentals), method: GET
--	This provides a convenient method for the front-end to retrieve rentalId values and display a database of all rentals
+### Fetching a list of all rentals (`/api/rentals`), method: GET
+-	This provides a convenient method for the front-end to retrieve **rentalId** values and display a database of all rentals
 
-### Deleting a single Rental (/api/rentals/{rentalId}/delete), method: DELETE
--	This provides the possibility to delete asingle Rental instance from the database, e.g. if a reservation is cancelled. The rentalId must be provided as a path variable.
+### Deleting a single Rental (`/api/rentals/{rentalId}/delete`), method: DELETE
+-	This provides the possibility to delete asingle Rental instance from the database, e.g. if a reservation is cancelled. The **rentalId** must be provided as a path variable.
 
 ````
