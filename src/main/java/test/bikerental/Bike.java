@@ -1,7 +1,6 @@
 package test.bikerental;
 
 import org.hibernate.annotations.GenericGenerator;
-
 import javax.persistence.*;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -10,10 +9,6 @@ import java.util.Set;
 @Entity
 public class Bike {
 
-    // will create a unique list of bike types - REMOVED. To allow possible type extension
-    /*public enum BikeType {
-        NORMAL, MOUNTAIN
-    }*/
 
     //fields
     @Id
@@ -25,6 +20,7 @@ public class Bike {
 
     @OneToMany(mappedBy = "bike")
     private Set<Rental> rentalsPerBike = new HashSet<>();
+
 
     //constructors
     public Bike(){};

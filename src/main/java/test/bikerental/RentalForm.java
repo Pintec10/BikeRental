@@ -3,6 +3,8 @@ package test.bikerental;
 import java.time.LocalDate;
 
 public class RentalForm {
+
+
     //fields
     private String name;
     private String email;
@@ -11,6 +13,7 @@ public class RentalForm {
     private LocalDate startDate;
     private Integer agreedDurationDays;
     private Long bikeId;
+
 
     //constructors
     public RentalForm(){};
@@ -21,34 +24,29 @@ public class RentalForm {
         this.bikeType = bikeType;
         this.startDate = startDate;
         this.agreedDurationDays = agreedDurationDays;
-        this.bikeId = bikeId;
+        // 'bikeId' field is needed only if the alternative Bike Return endpoint is used
+        /*this.bikeId = bikeId;*/
     }
 
-    //methods
 
+    //methods
     public String getName() {
         return name;
     }
-
     public String getEmail() {
         return email;
     }
-
     public String getPhoneNumber() {
         return phoneNumber;
     }
-
     public String getBikeType() {
         return bikeType;
     }
-
     public LocalDate getStartDate() {
         return startDate;
     }
-
     public Integer getAgreedDurationDays() {
         return agreedDurationDays;
     }
-
-    public Long getBikeId() { return bikeId; }
+    /*public Long getBikeId() { return bikeId; }*/
 }

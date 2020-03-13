@@ -5,11 +5,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.EnumMap;
+
 
 @SpringBootApplication
 public class BikeRentalApplication {
@@ -52,7 +49,7 @@ public class BikeRentalApplication {
 
 
 			// ----- TESTBED FROM HERE - ONLY FOR TESTING PURPOSES. DELETE IN PRODUCTION
-			Customer cs01 = new Customer("Bartek Gabryelczyk", "bartek@gmail.com", "+358123456");
+			/*Customer cs01 = new Customer("Bartek Gabryelczyk", "bartek@gmail.com", "+358123456");
 			Customer cs02 = new Customer("Timo Moisio", "timo@gmail.com", "+358654321");
 			customerRepository.save(cs01);
 			customerRepository.save(cs02);
@@ -71,8 +68,9 @@ public class BikeRentalApplication {
 			rentalRepository.save(rn02);
 			rentalRepository.save(rn03);
 			rentalRepository.save(rn04);
-			rentalRepository.save(rn05);
+			rentalRepository.save(rn05);*/
 			// ----- TESTBED ENDS HERE
+
 			}
 		};
 	}

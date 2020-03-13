@@ -1,7 +1,6 @@
 package test.bikerental;
 
 import org.hibernate.annotations.GenericGenerator;
-
 import javax.persistence.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,12 +29,12 @@ public class PriceList {
         return bikePriceList;
     }
 
-        // may allow to later change the priceList
+        // --> may allow to later change the priceList
     public void addOrUpdatePriceListItem(String bikeType, Double pricePerDay) {
         this.bikePriceList.put(bikeType, pricePerDay);
     }
 
-        // may allow to later change the priceList
+        // --> may allow to later change the priceList
     public void removePriceListItem (String bikeType) {
         if (this.bikePriceList.containsKey(bikeType)) {
             this.bikePriceList.remove(bikeType);

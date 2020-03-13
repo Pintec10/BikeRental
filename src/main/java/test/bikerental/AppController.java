@@ -2,11 +2,9 @@ package test.bikerental;
 
 import org.apache.tomcat.jni.Local;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.*;
@@ -47,7 +45,7 @@ public class AppController {
 
         // minimum check for email format
         if (!rentalForm.getEmail().contains("@") || rentalForm.getEmail().contains(" ")) {
-            return new ResponseEntity(makeMap("error", "Invalid email format"), HttpStatus.FORBIDDEN);
+            return new ResponseEntity(makeMap("error", "Invalid email format: must contain a @ sign and no spaces"), HttpStatus.FORBIDDEN);
         }
 
         // minimum check for rental duration
@@ -61,6 +59,7 @@ public class AppController {
                         rentalForm.getAgreedDurationDays())).findAny().orElse(null);
         System.out.println(("availableBike"));
         System.out.println(availableBike);
+
         //if bike is not available, return error message
         if (availableBike == null) {
             return new ResponseEntity(makeMap("error", "No bikes available! Change/check bike type or time slot"), HttpStatus.FORBIDDEN);
@@ -80,7 +79,7 @@ public class AppController {
         if(customerInRepository == null) {
             System.out.println("new customer!");
             System.out.println(rentalForm.getEmail());
-            customerRepository.save(new Customer(rentalForm.getName().trim(), rentalForm.getEmail(), rentalForm.getPhoneNumber()));
+            customerRepository.save(new Customer(rentalForm.getName().trim(), rentalForm.getEmail(), rentalForm.getPhoneNumber().trim()));
             customerInRepository = customerRepository.findByEmail(rentalForm.getEmail()).orElse(null);
         }
 
@@ -97,7 +96,6 @@ public class AppController {
 
         Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(newRental));
-
         return new ResponseEntity(output, HttpStatus.CREATED);
     }
 
@@ -127,7 +125,7 @@ public class AppController {
 
         //if no Rental is found, send an error message
         if (rentalInRepository == null) {
-            return new ResponseEntity(makeMap("error", "Reservation not found, check bike id and rental starting date (YYYY-MM-DD)"),
+            return new ResponseEntity(makeMap("error", "Reservation not found"),
                     HttpStatus.NOT_FOUND);
         }
 
@@ -136,11 +134,11 @@ public class AppController {
             return new ResponseEntity(makeMap("error", "Bike was already returned"), HttpStatus.FORBIDDEN);
         }
 
-        //calculate actual rental duration
+        //calculate actual rental duration; avoid negative extra days if returned earlier
         LocalDate returnDay = LocalDate.now();
         LocalDate rentalStartDate = rentalInRepository.getStartDate();
         Integer actualRentalDurationDays = Period.between(rentalStartDate, returnDay.plusDays(1)).getDays();
-        if(actualRentalDurationDays < 0) {
+        if(returnDay.isBefore(rentalStartDate)) {
             return new ResponseEntity(makeMap("error", "rental end date cannot be before start date"), HttpStatus.FORBIDDEN);
         }
         Integer extraDays = actualRentalDurationDays - rentalInRepository.getAgreedDurationDays();
@@ -148,27 +146,21 @@ public class AppController {
             extraDays = 0;
         }
 
-        //calculate final price
+        //calculate final price; if bike is returned earlier than agreed, there is no discount (bargain with the owner!)
         Double bikePricePerDay = rentalInRepository.getBikeDailyPrice();
         Double extraPricePerDay = rentalInRepository.getExtraDailyPrice();
-
-        //if bike is returned earlier than agreed, there is no discount (they can bargain with the owner!)
         Double finalCost = (actualRentalDurationDays * bikePricePerDay) + (extraDays * extraPricePerDay);
         if(finalCost < rentalInRepository.getUpfrontPayment()) {
             finalCost = rentalInRepository.getUpfrontPayment();
         }
 
-        // update RentalRepository and send information to front-end, if the return was not already handled before
-        if(rentalInRepository.getFinalCost() == null) {
-            rentalInRepository.setActualEndDate(returnDay);
-            rentalInRepository.setFinalCost(finalCost);
-            rentalRepository.save(rentalInRepository);
-        } else { System.out.println("case already handled");}
+        // update RentalRepository and send information to front-end
+        rentalInRepository.setActualEndDate(returnDay);
+        rentalInRepository.setFinalCost(finalCost);
+        rentalRepository.save(rentalInRepository);
 
         Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(rentalInRepository));
-        //output.put("actual_rental_duration_days", actualRentalDurationDays.toString());
-
         return new ResponseEntity(output, HttpStatus.OK);
 
     }
@@ -212,7 +204,7 @@ public class AppController {
     }
 
     /* ----- ALTERNATIVE ENDPOINT FOR BIKE RETURN -----
-       // more suitable if there is no endpoint for
+       // more suitable if there is no endpoint for retrieving a list of all rentals (can't easily get rentalId)
     @RequestMapping(value="/return", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> returnBike(@RequestBody RentalForm returnForm) {
 
@@ -223,7 +215,6 @@ public class AppController {
      */
 
 
-
     // ----- ALL RENTALS VIEW ENDPOINT -----
     @RequestMapping(value="/rentals", method = RequestMethod.GET)
     public ResponseEntity<List<Map<String, Object>>> viewAllRentals() {
@@ -232,5 +223,16 @@ public class AppController {
                 .map(oneRental -> rentalMapper(oneRental))
                 .collect(Collectors.toList());
         return new ResponseEntity(allRentals, HttpStatus.OK);
+    }
+
+    // ----- REMOVE SINGLE RENTAL ENDPOINT
+    @RequestMapping(value="/rentals/{rentalId}/delete", method = RequestMethod.DELETE)
+    public ResponseEntity<Map<String, Object>> removeOneRental(@PathVariable Long rentalId) {
+        Rental requestedRental = rentalRepository.findById(rentalId).orElse(null);
+        if(requestedRental == null) {
+            return  new ResponseEntity(makeMap("error", "Requested Rental not found"), HttpStatus.NOT_FOUND);
+        }
+        rentalRepository.delete(requestedRental);
+        return new ResponseEntity(makeMap("success", "Requested Rental deleted from database"), HttpStatus.OK);
     }
 }

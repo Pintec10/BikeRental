@@ -1,12 +1,12 @@
 package test.bikerental;
 
 import org.hibernate.annotations.GenericGenerator;
-
 import javax.persistence.*;
 import java.util.Set;
 
 @Entity
 public class Customer {
+
 
     //fields
     @Id
@@ -20,6 +20,7 @@ public class Customer {
 
     @OneToMany(mappedBy = "customer")
     private Set<Rental> rentalsPerCustomer;
+
 
     //constructors
     public Customer(){};

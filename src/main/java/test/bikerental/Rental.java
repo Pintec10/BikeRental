@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Entity
 public class Rental {
 
+
     //fields
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
@@ -21,7 +22,6 @@ public class Rental {
     private Double upfrontPayment;
     private LocalDate actualEndDate;
     private Double finalCost;
-
 
     @ManyToOne
     @JoinColumn(name="bike_id")
