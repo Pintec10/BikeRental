@@ -1,3 +1,4 @@
+
 ## GENERAL DESCRIPTION
 
 This is a backend application for a bike rental store with two types of bikes (3 normal bikes and 2 mountain bikes). 
@@ -66,4 +67,4 @@ The app was designed with extensibility criteria in mind: if in the future addit
 ### Deleting a single Rental (`/api/rentals/{rentalId}/delete`), method: DELETE
 -	This provides the possibility to delete asingle Rental instance from the database, e.g. if a reservation is cancelled. The **rentalId** must be provided as a path variable.
 
-````
+
