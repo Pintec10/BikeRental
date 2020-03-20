@@ -68,6 +68,6 @@ The app was designed with extensibility criteria in mind: if in the future addit
 -	This provides a convenient method for the front-end to retrieve **rentalId** values and display a database of all rentals
 
 ### Deleting a single Rental (`/api/rentals/{rentalId}/delete`), method: DELETE
--	This provides the possibility to delete asingle Rental instance from the database, e.g. if a reservation is cancelled. The **rentalId** must be provided as a path variable.
+-	This provides the possibility to delete a single Rental instance from the database, e.g. if a reservation is cancelled. The **rentalId** must be provided as a path variable.
 
 
