@@ -61,8 +61,8 @@ The app was designed with extensibility criteria in mind: if in the future addit
 -	In the end, it returns a **finalCost** field which contains the total price including possible extra fees due to late return of the bike.
 -	It is assumed that if a bike is returned earlier than the expected date, no discount or refund will be applied, and the **finalCost** is the same as the **upfrontPayment**.
 -	Error messages are issued if:
-  -	the return event for the requested Rental has already been handled (**actualEndDate** has been set)
-  -	the return date (which is the day when the POST request is made) is before the starting rental date; i.e., cancelling a reservation cannot be done through this endpoint. One for deleting a rental has been included here (see below).
+  	-	the return event for the requested Rental has already been handled (**actualEndDate** has been set)
+  	-	the return date (which is the day when the POST request is made) is before the starting rental date; i.e., cancelling a reservation cannot be done through this endpoint. One for deleting a rental has been included here (see below).
 
 ### Fetching a list of all rentals (`/api/rentals`), method: GET
 -	This provides a convenient method for the front-end to retrieve **rentalId** values and display a database of all rentals
