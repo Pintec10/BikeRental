@@ -142,6 +142,7 @@ public class AppController {
         return availableBike;
     }
 
+
     private Boolean isAvailable(Bike oneBike, LocalDate reqStartRentalDate, int reqRentalDurationDays) {
         LocalDate reqEndRentalDate = reqStartRentalDate.plusDays(reqRentalDurationDays - 1);
         Set<Rental> singleBikeRentals = oneBike.getRentalsPerBike();
@@ -214,6 +215,7 @@ public class AppController {
                 (rental.getExtraDailyPrice() + rental.getBikeDailyPrice()) * extraDays;
         return finalCost;
     }
+
 
     private Map<String,Object> rentalMapper (Rental rental) {
         Map<String, Object> output = new LinkedHashMap<>();
