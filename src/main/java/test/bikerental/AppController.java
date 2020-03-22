@@ -24,44 +24,33 @@ public class AppController {
     RentalRepository rentalRepository;
 
     @Autowired
-    PriceListRepository priceListRepository;
+    PriceRepository priceRepository;
 
 
-    // ----- RENTAL ENDPOINT -----
+    // -------- RENTAL ENDPOINT --------
     @RequestMapping(value="/rent", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> createNewRental(@RequestBody RentalForm rentalForm) {
 
         //setup
-        String requiredBikeType = rentalForm.getBikeType();
-        PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
         Rental newRental = new Rental();
 
-        //form validation
+        //form validation; if not ok, returns error message
         Map<Boolean, ResponseEntity<Map<String, Object>>> formIsValid = rentalFormValidation(rentalForm);
         if(formIsValid.containsKey(false)) {
             return formIsValid.get(false);
         }
 
-        //looks for one random available bike of the required type
-        Bike availableBike = bikeRepository.findByBikeType(requiredBikeType).stream()
-                .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
-                        rentalForm.getAgreedDurationDays())).findAny().orElse(null);
-        System.out.println(("availableBike"));
-        System.out.println(availableBike);
-
-        //if bike is not available, return error message
+        //looks for one random available bike of the required type; if bike is not available, return error message
+        Bike availableBike = checkForAvailableBikes(rentalForm);
         if (availableBike == null) {
-            return new ResponseEntity(makeMap("error", "No bikes available! Change/check bike type or time slot"), HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(makeMap("error", "No bikes available! Change/check bike type or time slot"), HttpStatus.FORBIDDEN);
         }
 
-        //calculate and set upfront payment; if bike model is not in the price list, return error
-        if (priceListInstance.getBikePriceList().containsKey(requiredBikeType) ) {
-            Double upfrontPayment = priceListInstance.getBikePriceList().get(requiredBikeType)
-                    * rentalForm.getAgreedDurationDays() ;
-            newRental.setUpfrontPayment(upfrontPayment);
-        } else {
-            return new ResponseEntity(makeMap("error", "This bike model is not in the price list"), HttpStatus.FORBIDDEN);
-        }
+        //calculate and set bike daily price, possible extra fee for late return, and upfront payment
+        Map<String,Double> upfrontRentalPrices = calculateCostsUpfront(rentalForm);
+        newRental.setBikeDailyPrice(upfrontRentalPrices.get("requestedBikePrice"));
+        newRental.setExtraDailyPrice(upfrontRentalPrices.get("extraPrice"));
+        newRental.setUpfrontPayment(upfrontRentalPrices.get("upfrontPayment"));
 
         //if customer is not already in database, then save it
         Customer customerInRepository = customerRepository.findByEmail(rentalForm.getEmail()).orElse(null);
@@ -75,17 +64,14 @@ public class AppController {
         newRental.setBike(availableBike);
         newRental.setStartDate(rentalForm.getStartDate());
         newRental.setAgreedDurationDays(rentalForm.getAgreedDurationDays());
-        newRental.setBikeDailyPrice(priceListInstance.getBikePriceList().get(availableBike.getBikeType()));
-        newRental.setExtraDailyPrice(priceListInstance.getBikePriceList().get("extraFee"));
         newRental.setActualEndDate(null);
         newRental.setFinalCost(null);
         rentalRepository.save(newRental);
 
         Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(newRental));
-        return new ResponseEntity(output, HttpStatus.CREATED);
+        return new ResponseEntity<>(output, HttpStatus.CREATED);
     }
-
 
 
     private Map<Boolean, ResponseEntity<Map<String, Object>>>  rentalFormValidation (RentalForm rentalForm) {
@@ -95,38 +81,65 @@ public class AppController {
         if (rentalForm.getStartDate() == null || rentalForm.getAgreedDurationDays() == null
                 || rentalForm.getBikeType() == null || rentalForm.getName() == null
                 || rentalForm.getEmail() == null || rentalForm.getPhoneNumber() == null) {
-            ResponseEntity response = new ResponseEntity(makeMap("error", "Please send all required information"), HttpStatus.BAD_REQUEST);
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Please send all required information"), HttpStatus.BAD_REQUEST);
             output.put(false, response);
             return output;
         }
 
         // minimum check for email format
         if (!rentalForm.getEmail().contains("@") || rentalForm.getEmail().contains(" ")) {
-            ResponseEntity response = new ResponseEntity(makeMap("error", "Invalid email format: must contain a @ sign and no spaces"), HttpStatus.FORBIDDEN);
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Invalid email format: must contain a @ sign and no spaces"), HttpStatus.FORBIDDEN);
             output.put(false, response);
             return output;
         }
 
         // minimum check for rental duration
         if (rentalForm.getAgreedDurationDays() < 1) {
-            ResponseEntity response = new ResponseEntity(makeMap("error", "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
             output.put(false, response);
             return output;
         }
 
         //if startDate is in the past, send error message
         if(rentalForm.getStartDate().isBefore(LocalDate.now())) {
-            ResponseEntity response = new ResponseEntity(makeMap("error", "Rental start date is in the past"), HttpStatus.FORBIDDEN);
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Rental start date is in the past"), HttpStatus.FORBIDDEN);
             output.put(false, response);
             return output;
         }
 
-        ResponseEntity response = new ResponseEntity(makeMap("valid", "Form ok"), HttpStatus.OK);
+        //if bike model is not present in the price list, return error
+        if(!priceRepository.findByBikeType(rentalForm.getBikeType()).isPresent()) {
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "This bike model is not in the price list"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        //if extra price for late return is not set, return error
+        if(!priceRepository.findByBikeType("extraFee").isPresent()) {
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "The extra price for late return has not been set yet."), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        //if all is good, just return an OK response with "true" as key
+        ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("valid", "Form ok"), HttpStatus.OK);
         output.put(true, response);
         return output;
-
     }
 
+    public Bike checkForAvailableBikes (RentalForm rentalForm) {
+        //looks for any available bike in BikeRepository
+        Bike availableBike = bikeRepository.findByBikeType(rentalForm.getBikeType()).stream()
+                .filter(oneBike -> isAvailable(oneBike, rentalForm.getStartDate(),
+                        rentalForm.getAgreedDurationDays())).findAny().orElse(null);
+        return availableBike;
+    }
 
     private Boolean isAvailable(Bike oneBike, LocalDate reqStartRentalDate, int reqRentalDurationDays) {
         LocalDate reqEndRentalDate = reqStartRentalDate.plusDays(reqRentalDurationDays - 1);
@@ -138,6 +151,17 @@ public class AppController {
         || oneRental.getStartDate().isAfter(reqEndRentalDate));
     }
 
+    private Map<String, Double> calculateCostsUpfront(RentalForm rentalForm) {
+        Price requestedBikePrice = priceRepository.findByBikeType(rentalForm.getBikeType()).orElse(null);
+        Double upfrontPayment = requestedBikePrice.getPricePerDay() * rentalForm.getAgreedDurationDays();
+        Price extraPrice = priceRepository.findByBikeType("extraFee").orElse(null);
+
+        Map<String, Double> upfrontCosts = new HashMap<>();
+        upfrontCosts.put("requestedBikePrice", requestedBikePrice.getPricePerDay());
+        upfrontCosts.put("extraPrice", extraPrice.getPricePerDay());
+        upfrontCosts.put("upfrontPayment", upfrontPayment);
+        return upfrontCosts;
+    }
 
     private Map<String, Object> makeMap(String key, Object value) {
         Map<String, Object> output = new HashMap<>();
@@ -146,53 +170,45 @@ public class AppController {
     }
 
 
-    // ----- RETURN ENDPOINT -----
+    // -------- RETURN ENDPOINT --------
     @RequestMapping(value="/return/{rentalId}", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> returnBike(@PathVariable Long rentalId) {
 
         //setup
         Rental rentalInRepository = rentalRepository.findById(rentalId).orElse(null);
 
-        //if no Rental is found, send an error message
-        if (rentalInRepository == null) {
-            return new ResponseEntity(makeMap("error", "Reservation not found"),
-                    HttpStatus.NOT_FOUND);
+        //validate if conditions are ok for this return; if not, return error message
+        Map<Boolean, ResponseEntity<Map<String, Object>>> returnIsValid = returnValidation(rentalInRepository);
+        if(returnIsValid.containsKey(false)) {
+            return returnIsValid.get(false);
         }
 
-        //if bike return has been already handled, send an error message
-        if(rentalInRepository.getActualEndDate() != null) {
-            return new ResponseEntity(makeMap("error", "Bike was already returned"), HttpStatus.FORBIDDEN);
-        }
-
-        //calculate actual rental duration; avoid negative extra days if returned earlier
-        LocalDate returnDay = LocalDate.now();
-        LocalDate rentalStartDate = rentalInRepository.getStartDate();
-        Integer actualRentalDurationDays = Period.between(rentalStartDate, returnDay.plusDays(1)).getDays();
-        if(returnDay.isBefore(rentalStartDate)) {
-            return new ResponseEntity(makeMap("error", "rental end date cannot be before start date"), HttpStatus.FORBIDDEN);
-        }
-        Integer extraDays = actualRentalDurationDays - rentalInRepository.getAgreedDurationDays();
-        if(extraDays < 0) {
-            extraDays = 0;
-        }
-
-        //calculate final price; if bike is returned earlier than agreed, there is no discount (bargain with the owner!)
-        Double bikePricePerDay = rentalInRepository.getBikeDailyPrice();
-        Double extraPricePerDay = rentalInRepository.getExtraDailyPrice();
-        Double finalCost = (actualRentalDurationDays * bikePricePerDay) + (extraDays * extraPricePerDay);
-        if(finalCost < rentalInRepository.getUpfrontPayment()) {
-            finalCost = rentalInRepository.getUpfrontPayment();
-        }
+        //calculate final costs
+        Double finalCost = calculateFinalCost(rentalInRepository);
 
         // update RentalRepository and send information to front-end
-        rentalInRepository.setActualEndDate(returnDay);
+        rentalInRepository.setActualEndDate(LocalDate.now());
         rentalInRepository.setFinalCost(finalCost);
         rentalRepository.save(rentalInRepository);
 
         Map<String, Object> output = new LinkedHashMap<>();
         output.putAll(rentalMapper(rentalInRepository));
-        return new ResponseEntity(output, HttpStatus.OK);
+        return new ResponseEntity<>(output, HttpStatus.OK);
 
+    }
+
+
+    private Double calculateFinalCost(Rental rental) {
+        Integer extraDays = Period.between(rental.getExpectedEndDate(), LocalDate.now()).getDays();
+
+        //avoid negative extra days if returned earlier; no discounts for early return!
+        if(extraDays < 0) {
+            extraDays = 0;
+        }
+
+        Double finalCost = rental.getUpfrontPayment() +
+                (rental.getExtraDailyPrice() + rental.getBikeDailyPrice()) * extraDays;
+        return finalCost;
     }
 
     private Map<String,Object> rentalMapper (Rental rental) {
@@ -233,6 +249,40 @@ public class AppController {
         return output;
     }
 
+    private Map<Boolean, ResponseEntity<Map<String, Object>>>  returnValidation (Rental rental) {
+        Map<Boolean, ResponseEntity<Map<String, Object>>> output = new HashMap<>();
+
+        //if no Rental is found, send an error message
+        if (rental == null) {
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Reservation not found"), HttpStatus.NOT_FOUND);
+            output.put(false, response);
+            return output;
+        }
+
+        //if bike return has been already handled, send an error message
+        if(rental.getActualEndDate() != null) {
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "Bike was already returned"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        //if return date is before start date, send error: use delete rental endpoint instead to cancel booking
+        if(LocalDate.now().isBefore(rental.getStartDate())) {
+            ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("error",
+                    "rental end date cannot be before start date; cancel rental instead"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        //if all is good, just return an OK response with "true" as key
+        ResponseEntity<Map<String, Object>> response = new ResponseEntity<>(makeMap("valid", "Form ok"), HttpStatus.OK);
+        output.put(true, response);
+        return output;
+    }
+
+
     /* ----- ALTERNATIVE ENDPOINT FOR BIKE RETURN -----
        // more suitable if there is no endpoint for retrieving a list of all rentals (can't easily get rentalId)
     @RequestMapping(value="/return", method = RequestMethod.POST)
@@ -252,7 +302,7 @@ public class AppController {
                 .sorted(Comparator.comparingLong(Rental::getId))
                 .map(oneRental -> rentalMapper(oneRental))
                 .collect(Collectors.toList());
-        return new ResponseEntity(allRentals, HttpStatus.OK);
+        return new ResponseEntity<>(allRentals, HttpStatus.OK);
     }
 
     // ----- REMOVE SINGLE RENTAL ENDPOINT
@@ -260,9 +310,9 @@ public class AppController {
     public ResponseEntity<Map<String, Object>> removeOneRental(@PathVariable Long rentalId) {
         Rental requestedRental = rentalRepository.findById(rentalId).orElse(null);
         if(requestedRental == null) {
-            return  new ResponseEntity(makeMap("error", "Requested Rental not found"), HttpStatus.NOT_FOUND);
+            return  new ResponseEntity<>(makeMap("error", "Requested Rental not found"), HttpStatus.NOT_FOUND);
         }
         rentalRepository.delete(requestedRental);
-        return new ResponseEntity(makeMap("success", "Requested Rental deleted from database"), HttpStatus.OK);
+        return new ResponseEntity<>(makeMap("success", "Requested Rental deleted from database"), HttpStatus.OK);
     }
 }

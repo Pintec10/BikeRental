@@ -20,21 +20,21 @@ The app was designed with extensibility criteria in mind: if in the future addit
 -	Contains all the time and cost information for each rental event. 
 -	Each instance stores also its daily costs for bike renting and late return; since in principle the price list might be changed in the future, this ensures that the correct prices are stored for each past rental event.
 
-### PriceList
--	Contains all the price values for bike types and extra days; it is used as a reference table to determine costs when a new Rental instance is created.
--	Only a single persistent instance of this class exists, and it is initiated in the Command Line Runner
--	Compared to hard-coding the prices during the creation of a Rental instance, this solution allows more flexibility. If in the future endpoints are added to perform CRUD operations, the user could change prices or add bike types by him/herself without requiring modifications to the back-end code.
+### Price
+-	Each instance contains the reference daily price for one type of bike, or for the extra daily price due for late return (NOTE: the extra fee is stored with the **bikeType** field "extraFee").
+-	Instances for normal bike, mountain bike and extra fee are initiated in the Command Line Runner.
+-	Compared to hard-coding the prices during the creation of a Rental instance, this solution allows for more flexibility. If endpoints are added in the future to perform CRUD operations, the user could change prices or add bike types by him/herself without requiring modifications to the back-end code.
 
 ### RentalForm
 -	This is a wrapper class used for the renting endpoint, since the required information to be placed in the body of the request contains elements from both the Bike and Customer classes. 
 
 ### AppController
--	Contains the REST controller and its methods 
+-	Contains the REST controller and its methods (see "Endpoints").
 
 ### BikeRentalApplication
 -	Contains the main method and the Command Line Runner
--	All existing Bike instances (3 normal, 2 mountain) and the single PriceList instance are initiated in the Command Line Runner; to make sure this happens only once, the code first checks that the corresponding repositories are empty.
--	There is also a testbed that is currently commented out
+-	All default instances of Bike (3 normal, 2 mountain) and Price (normal, mountain, extraFee) are initiated in the Command Line Runner; to make sure this happens only once, the code first checks if BikeRepository is empty, and if those three Prices already exist (NOTE: extraFee MUST be defined at all times).
+-	There is also a testbed that is currently commented out.
 
 
 ## ENDPOINTS

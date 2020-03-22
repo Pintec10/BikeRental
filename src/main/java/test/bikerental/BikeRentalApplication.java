@@ -6,6 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import java.time.LocalDate;
+import java.util.Optional;
 
 
 @SpringBootApplication
@@ -18,19 +19,26 @@ public class BikeRentalApplication {
 
 	@Bean
 	public CommandLineRunner initTestData (BikeRepository bikeRepository, CustomerRepository customerRepository,
-										   RentalRepository rentalRepository, PriceListRepository priceListRepository) {
+										   RentalRepository rentalRepository, PriceRepository priceRepository) {
 		return (args) -> {
 
 			// INITIALIZE STORE DATA
 
-			//populates PriceListRepository with a single instance, only the first time
-			if (priceListRepository.count() == 0) {
-				System.out.println("initiating PriceList");
-				PriceList priceList = new PriceList();
-				priceList.addOrUpdatePriceListItem("normal", 10.0);
-				priceList.addOrUpdatePriceListItem("mountain", 12.0);
-				priceList.addOrUpdatePriceListItem("extraFee", 3.0);
-				priceListRepository.save(priceList);
+			//creates Price instances for default bike types and extra fee, if they do not already exist
+			if (!priceRepository.findByBikeType("normal").isPresent()) {
+				System.out.println("creating Price for normal bike");
+				Price price01 = new Price("normal", 10.0);
+				priceRepository.save(price01);
+			}
+			if (!priceRepository.findByBikeType("mountain").isPresent()) {
+				System.out.println("creating Price for mountain bike");
+				Price price02 = new Price("mountain", 12.0);
+				priceRepository.save(price02);
+			}
+			if (!priceRepository.findByBikeType("extraFee").isPresent()) {
+				System.out.println("creating Price for late return");
+				Price price02 = new Price("extraFee", 3.0);
+				priceRepository.save(price02);
 			}
 
 			// populates BikeRepository only the first time
