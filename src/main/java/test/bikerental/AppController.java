@@ -36,26 +36,10 @@ public class AppController {
         PriceList priceListInstance = priceListRepository.findAll().stream().findFirst().orElse(null);
         Rental newRental = new Rental();
 
-        //if rentalForm info is not complete, return error message
-        if (rentalForm.getStartDate() == null || rentalForm.getAgreedDurationDays() == null
-                || rentalForm.getBikeType() == null || rentalForm.getName() == null
-                || rentalForm.getEmail() == null || rentalForm.getPhoneNumber() == null) {
-            return new ResponseEntity(makeMap("error", "Please send all required information"), HttpStatus.BAD_REQUEST);
-        }
-
-        // minimum check for email format
-        if (!rentalForm.getEmail().contains("@") || rentalForm.getEmail().contains(" ")) {
-            return new ResponseEntity(makeMap("error", "Invalid email format: must contain a @ sign and no spaces"), HttpStatus.FORBIDDEN);
-        }
-
-        // minimum check for rental duration
-        if (rentalForm.getAgreedDurationDays() < 1) {
-            return new ResponseEntity(makeMap("error", "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
-        }
-
-        //if startDate is in the past, send error message
-        if(rentalForm.getStartDate().isBefore(LocalDate.now())) {
-            return new ResponseEntity(makeMap("error", "Rental start date is in the past"), HttpStatus.FORBIDDEN);
+        //form validation
+        Map<Boolean, ResponseEntity<Map<String, Object>>> formIsValid = rentalFormValidation(rentalForm);
+        if(formIsValid.containsKey(false)) {
+            return formIsValid.get(false);
         }
 
         //looks for one random available bike of the required type
@@ -102,6 +86,48 @@ public class AppController {
         return new ResponseEntity(output, HttpStatus.CREATED);
     }
 
+
+
+    private Map<Boolean, ResponseEntity<Map<String, Object>>>  rentalFormValidation (RentalForm rentalForm) {
+        Map<Boolean, ResponseEntity<Map<String, Object>>> output = new HashMap<>();
+
+        //if rentalForm info is not complete, return error message
+        if (rentalForm.getStartDate() == null || rentalForm.getAgreedDurationDays() == null
+                || rentalForm.getBikeType() == null || rentalForm.getName() == null
+                || rentalForm.getEmail() == null || rentalForm.getPhoneNumber() == null) {
+            ResponseEntity response = new ResponseEntity(makeMap("error", "Please send all required information"), HttpStatus.BAD_REQUEST);
+            output.put(false, response);
+            return output;
+        }
+
+        // minimum check for email format
+        if (!rentalForm.getEmail().contains("@") || rentalForm.getEmail().contains(" ")) {
+            ResponseEntity response = new ResponseEntity(makeMap("error", "Invalid email format: must contain a @ sign and no spaces"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        // minimum check for rental duration
+        if (rentalForm.getAgreedDurationDays() < 1) {
+            ResponseEntity response = new ResponseEntity(makeMap("error", "Rental duration must be at least one day"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        //if startDate is in the past, send error message
+        if(rentalForm.getStartDate().isBefore(LocalDate.now())) {
+            ResponseEntity response = new ResponseEntity(makeMap("error", "Rental start date is in the past"), HttpStatus.FORBIDDEN);
+            output.put(false, response);
+            return output;
+        }
+
+        ResponseEntity response = new ResponseEntity(makeMap("valid", "Form ok"), HttpStatus.OK);
+        output.put(true, response);
+        return output;
+
+    }
+
+
     private Boolean isAvailable(Bike oneBike, LocalDate reqStartRentalDate, int reqRentalDurationDays) {
         LocalDate reqEndRentalDate = reqStartRentalDate.plusDays(reqRentalDurationDays - 1);
         Set<Rental> singleBikeRentals = oneBike.getRentalsPerBike();
@@ -112,7 +138,8 @@ public class AppController {
         || oneRental.getStartDate().isAfter(reqEndRentalDate));
     }
 
-    private Map<String, Object> makeMap(String key, String value) {
+
+    private Map<String, Object> makeMap(String key, Object value) {
         Map<String, Object> output = new HashMap<>();
         output.put(key, value);
         return output;
