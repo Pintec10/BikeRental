@@ -27,7 +27,7 @@ public class AppController {
     PriceRepository priceRepository;
 
 
-    // -------- RENTAL ENDPOINT --------
+    // ----------- RENTAL ENDPOINT -----------
     @RequestMapping(value="/rent", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> createNewRental(@RequestBody RentalForm rentalForm) {
 
@@ -133,6 +133,7 @@ public class AppController {
         return output;
     }
 
+
     public Bike checkForAvailableBikes (RentalForm rentalForm) {
         //looks for any available bike in BikeRepository
         Bike availableBike = bikeRepository.findByBikeType(rentalForm.getBikeType()).stream()
@@ -151,6 +152,7 @@ public class AppController {
         || oneRental.getStartDate().isAfter(reqEndRentalDate));
     }
 
+
     private Map<String, Double> calculateCostsUpfront(RentalForm rentalForm) {
         Price requestedBikePrice = priceRepository.findByBikeType(rentalForm.getBikeType()).orElse(null);
         Double upfrontPayment = requestedBikePrice.getPricePerDay() * rentalForm.getAgreedDurationDays();
@@ -163,6 +165,7 @@ public class AppController {
         return upfrontCosts;
     }
 
+
     private Map<String, Object> makeMap(String key, Object value) {
         Map<String, Object> output = new HashMap<>();
         output.put(key, value);
@@ -170,7 +173,8 @@ public class AppController {
     }
 
 
-    // -------- RETURN ENDPOINT --------
+
+    // ----------- RETURN ENDPOINT -----------
     @RequestMapping(value="/return/{rentalId}", method = RequestMethod.POST)
     public ResponseEntity<Map<String, Object>> returnBike(@PathVariable Long rentalId) {
 
@@ -233,6 +237,7 @@ public class AppController {
         return output;
     }
 
+
     private Map<String, Object> customerMapper(Customer customer) {
         Map<String, Object> output = new LinkedHashMap<>();
         output.put("id", customer.getId());
@@ -242,12 +247,14 @@ public class AppController {
         return output;
     }
 
+
     private Map<String, Object> bikeMapper(Bike bike) {
         Map<String, Object> output = new LinkedHashMap<>();
         output.put("id", bike.getId().toString());
         output.put("type", bike.getBikeType());
         return output;
     }
+
 
     private Map<Boolean, ResponseEntity<Map<String, Object>>>  returnValidation (Rental rental) {
         Map<Boolean, ResponseEntity<Map<String, Object>>> output = new HashMap<>();
@@ -295,6 +302,7 @@ public class AppController {
      */
 
 
+
     // ----- ALL RENTALS VIEW ENDPOINT -----
     @RequestMapping(value="/rentals", method = RequestMethod.GET)
     public ResponseEntity<List<Map<String, Object>>> viewAllRentals() {
@@ -304,6 +312,8 @@ public class AppController {
                 .collect(Collectors.toList());
         return new ResponseEntity<>(allRentals, HttpStatus.OK);
     }
+
+
 
     // ----- REMOVE SINGLE RENTAL ENDPOINT
     @RequestMapping(value="/rentals/{rentalId}/delete", method = RequestMethod.DELETE)
